@@ -216,7 +216,94 @@ Como era de esperarse por el análisis que se hizo anteriormente, en donde se di
 
 ## **Actividad 6: Variable Respuesta Categórica**
 
----
+# Como la distribución del precio está sesgada a la derecha y tiene valores extremos,
 
+q33 <- as.numeric(quantile(train_num$price, probs = 0.33, na.rm = TRUE))
+q67 <- as.numeric(quantile(train_num$price, probs = 0.67, na.rm = TRUE))
+
+train_clf <- train_num %>%
+  mutate(
+    price_cat = cut(
+      price,
+      breaks = c(-Inf, q33, q67, Inf),
+      labels = c("Económica", "Intermedia", "Cara"),
+      right = TRUE,
+      ordered_result = TRUE
+    )
+  )
+
+test_clf <- test_num %>%
+  mutate(
+    price_cat = cut(
+      price,
+      breaks = c(-Inf, q33, q67, Inf),
+      labels = c("Económica", "Intermedia", "Cara"),
+      right = TRUE,
+      ordered_result = TRUE
+    )
+  )
+
+cat("Límite superior de Económica:", q33, "\n")
+cat("Límite superior de Intermedia:", q67, "\n")
+
+tabla_categorias <- tibble(
+  Categoria = c("Económica", "Intermedia", "Cara"),
+  Rango = c(
+    paste0("[", min(train_clf$price, na.rm = TRUE), ", ", q33, "]"),
+    paste0("(", q33, ", ", q67, "]"),
+    paste0("(", q67, ", ", max(train_clf$price, na.rm = TRUE), "]")
+  ),
+  Frecuencia = as.numeric(table(train_clf$price_cat)),
+  Porcentaje = round(100 * prop.table(table(train_clf$price_cat)), 2)
+)
+
+knitr::kable(
+  tabla_categorias,
+  caption = "Variable respuesta categórica creada a partir del precio por noche"
+)
+```
+
+La variable price presenta una distribución fuertemente sesgada a la derecha, con varios valores extremos altos. Por esa razón, no era conveniente dividir el precio en intervalos del mismo ancho, ya que eso habría dejado muy pocas observaciones en la categoría de propiedades más caras. En su lugar, se decidió construir la nueva variable respuesta usando los percentiles 33% y 67% del conjunto de entrenamiento. Con este criterio, las propiedades se clasifican en tres grupos: Económicas, Intermedias y Caras. La categoría Económica incluye las propiedades con precio menor o igual al percentil 33; la categoría Intermedia agrupa las que quedan entre el percentil 33 y el 67; y la categoría Cara contiene las que superan el percentil 67. Esta decisión tiene fundamento estadístico porque se apoya directamente en la distribución observada de los datos y además ayuda a que las tres clases queden relativamente balanceadas, lo cual favorece el entrenamiento del árbol de clasificación.
+
+---
 ## **Actividad 7: Árbol de Clasificación**
 
+# Se elimina price como predictor porque la variable respuesta fue creada a partir de price.
+train_tree_clf <- train_clf %>% select(-price)
+test_tree_clf  <- test_clf %>% select(-price)
+
+set.seed(42)
+arbol_clasif <- rpart(
+  price_cat ~ .,
+  data = train_tree_clf,
+  method = "class",
+  control = rpart.control(maxdepth = 6, minsplit = 30, cp = 0.001)
+)
+
+printcp(arbol_clasif)
+
+rpart.plot(
+  arbol_clasif,
+  type = 4,
+  extra = 104,
+  fallen.leaves = TRUE,
+  main = "Árbol de clasificación para rango de precio"
+)
+
+importancia_clasif <- tibble(
+  Variable = names(arbol_clasif$variable.importance),
+  Importancia = as.numeric(arbol_clasif$variable.importance)
+) %>%
+  arrange(desc(Importancia))
+
+knitr::kable(
+  head(importancia_clasif, 10),
+  caption = "Variables más importantes en el árbol de clasificación"
+)
+```
+Para construir el árbol de clasificación se utilizó la nueva variable price_cat como respuesta y se excluyó la variable price del conjunto de predictores, ya que incluirla habría introducido fuga de información. El objetivo del modelo es aprender a clasificar una propiedad como Económica, Intermedia o Cara a partir del resto de variables numéricas disponibles.
+
+El árbol obtenido permite interpretar de forma clara cómo se separan las propiedades entre las tres categorías. Las divisiones superiores del árbol suelen concentrar la mayor capacidad explicativa, por lo que las variables que aparezcan en esos primeros nodos son las que más influyen en la clasificación. En este tipo de problema normalmente destacan variables relacionadas con el tamaño o capacidad del alojamiento y con la ubicación, lo cual tiene sentido, porque propiedades con más espacio, más capacidad y mejor localización tienden a pertenecer a categorías de precio más altas.
+
+Además, la representación gráfica del árbol facilita identificar reglas de decisión concretas. Por ejemplo, el modelo puede separar primero propiedades pequeñas de propiedades con mayor capacidad, y luego refinar la clasificación con variables adicionales. Esto hace que el árbol no solo sea útil para predecir, sino también para explicar qué características empujan a una vivienda hacia una categoría de precio específica.
+---
