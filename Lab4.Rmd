@@ -161,6 +161,8 @@ resultados_depth <- lapply(profundidades, function(d) {
 })
 
 tabla_depth <- bind_rows(resultados_depth)
+mejor_depth_row <- tabla_depth %>% arrange(RMSE) %>% slice(1)
+mejor_depth_val <- mejor_depth_row$Profundidad
 knitr::kable(tabla_depth, caption = "Desempeño del árbol de regresión por profundidad máxima")
 ```
 
