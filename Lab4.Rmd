@@ -136,11 +136,79 @@ cat("R2:  ", r2_af,   "\n")
 
 Esto representa una mejora sumamente enorme a lo que se obtuvo en el laboratorio 3, en ese entonces el R2 que se obtuvo estaba a penas en 0.0091 al pasarle la data de prueba. Este resultado en ese laboratorio no fue porque el modelo estuviera sobreajustado, porque incluso con data de entrenamiento los resultados eran bastante malos. En contraste, en este caso el R2 nos indica que nuestro modelo explica el 67.55% de los datos, que no es un punto ideal, puede que ajustando los niveles del árbol tengamos mejores resultados, pero sí ya es un punto favorable a comparación de lo que fue la regresión lineal. Esto puede deberse a que en la regresión lineal solo podemos explicar relaciones lineales, y probablemente nuestra variable objetivo a partir de nuestras variables "features" no tengan ese tipo de relación.
 
-
 ---
 
 ## **Actividades 4 y 5: Tuneo de Profundidad y Comparación con Regresión Lineal**
 
+Basándonos en el análisis de la tabla CP y el gráfico `plotcp`, se seleccionaron tres profundidades a probar:
+
+- **Profundidad 4**: es donde se observó la mejora más notable después del gran salto inicial entre los tamaños 1 y 3.
+- **Profundidad 8 y 12**: son los tamaños que se ubicaron por debajo de la línea punteada en el gráfico CP, lo que según la regla del 1-SE los convierte en candidatos con buen balance entre error y complejidad. Tenemos cierta duda con el 12, porque sentimos que ya son muchos niveles, pero queremos validar más adelante al sacar métricas.
+
+```{r tuneo-profundidad}
+profundidades <- c(4, 8, 12)
+
+resultados_depth <- lapply(profundidades, function(d) {
+  modelo <- rpart(price ~ ., data = train_num, method = "anova",
+                  control = rpart.control(maxdepth = d))
+  pred   <- predict(modelo, newdata = test_num)
+  tibble(
+    Profundidad = d,
+    RMSE = round(calc_rmse(test_num$price, pred), 2),
+    MAE  = round(calc_mae(test_num$price, pred), 2),
+    R2   = round(calc_r2(test_num$price, pred), 4)
+  )
+})
+
+tabla_depth <- bind_rows(resultados_depth)
+knitr::kable(tabla_depth, caption = "Desempeño del árbol de regresión por profundidad máxima")
+```
+
+Tenemos un empate, esto es bastante peculiar, pero al sacar los datos la profundidad de 8 y 12 presentaron las mismas métricas. Un RMSE de 1554.16, MAE de 246.53, y R2 de 0.6755. 
+
+### **Comparación con Regresión Lineal (Lab 3)**
+
+```{r modelo-lineal-lab3}
+vars_mejor <- c(
+  "host_listings_count", "accommodates", "bathrooms", "bedrooms", "beds",
+  "minimum_nights", "maximum_nights", "minimum_minimum_nights", "maximum_minimum_nights",
+  "availability_365", "estimated_occupancy_l365d",
+  "review_scores_cleanliness", "review_scores_location", "review_scores_value",
+  "calculated_host_listings_count"
+)
+
+vars_disponibles <- intersect(vars_mejor, names(train_num))
+train_mejor <- train_num[, c(vars_disponibles, "price")]
+test_mejor  <- test_num[,  c(vars_disponibles, "price")]
+
+modelo_lm_lab3 <- lm(price ~ ., data = train_mejor)
+pred_lm_lab3   <- predict(modelo_lm_lab3, newdata = test_mejor)
+
+rmse_lm <- round(calc_rmse(test_mejor$price, pred_lm_lab3), 2)
+mae_lm  <- round(calc_mae(test_mejor$price, pred_lm_lab3), 2)
+r2_lm   <- round(calc_r2(test_mejor$price, pred_lm_lab3), 4)
+```
+
+```{r tabla-comparacion-regresion}
+mejor_arbol_reg <- rpart(price ~ ., data = train_num, method = "anova",
+                         control = rpart.control(maxdepth = mejor_depth_val))
+pred_mejor_arbol <- predict(mejor_arbol_reg, newdata = test_num)
+
+comparacion_reg <- tibble(
+  Algoritmo = c(
+    "Regresión Lineal (Lab 3)",
+    paste0("Árbol de Regresión (profundidad ", mejor_depth_val, ")")
+  ),
+  RMSE = c(rmse_lm, round(calc_rmse(test_num$price, pred_mejor_arbol), 2)),
+  MAE  = c(mae_lm,  round(calc_mae(test_num$price, pred_mejor_arbol), 2)),
+  R2   = c(r2_lm,   round(calc_r2(test_num$price, pred_mejor_arbol), 4))
+)
+
+knitr::kable(comparacion_reg,
+             caption = "Comparación: Regresión Lineal vs Árbol de Regresión (conjunto de prueba)")
+```
+
+Como era de esperarse por el análisis que se hizo anteriormente, en donde se dijo que muy probablemente la varaible objetivo no se podía explicar simplemente con una relación lineal, si no que su relación con el resto de variables fuera algo no lineal y que por ende no se pudiera generalizar correctamente, en otras palabras el modelo queda subajustado. En contraste, el árbol de regresión con profundidad de 8 niveles presenta mejores valores para las tres métricas que se han evaluado: un RMSE de 1554.16, MAE de 246.53, y R2 de 0.6755. Todavía no se logra llegar a un punto adecuado, en donde el modelo explique aunque sea el 80% de los datos, probablemente si ajustamos más que solo la cantidad de niveles, pero esto quedaría pendiente para pruebas futuras. 
 
 ---
 
