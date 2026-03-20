@@ -90,9 +90,57 @@ calc_r2   <- function(obs, pred) {
 
 ## **Actividades 2 y 3: Árbol de Regresión con Todas las Variables**
 
+El árbol de regresión es un tipo de árbol de decisión en donde el objetivo es predecir una variable numérica. En un árbol de decisión, como indica el nombre, en cada uno de los nodos se toma una decisión en base a una condición y dependiendo de esto, nos podemos mover a otro nodo izquierdo o derecho. Hasta llegar a los nodos hojas, tendremos la respuesta a la variable objetivo, en este caso, el precio por noche de una habitación.
+
+### **Ajuste del árbol**
+
+```{r arbol-regresion-completo}
+# entrenamiento del árbol
+arbol_full <- rpart(price ~ ., data = train_num, method = "anova")
+printcp(arbol_full)
+```
+
+- CP: es complexity parameter, este representa el costo de agregar una división más al árbol, es decir, un nivel más. Este ayuda a indicar qué tanto va aportando cada nivel sobre el resultado de la variable objetivo.
+- nsplit: cantidad de divisiones que se han hecho hasta esa entrada en la tabla.
+- rel error: error relativo en entrenamiento.
+- xerror: erorr de validación cruzada.
+- xstd: desviación estándar del xerror. 
+
+Dados los datos, se logra visualizar que el árbol no mejora considerablemente cuando pasamos de 7 a 11 splits. Más adelante al tener que probar con varios niveles, podríamos probar con valores entre 5 y 8. 
+
+```{r plot-cp, fig.height=4, fig.width=6}
+plotcp(arbol_full)
+```
+
+```{r plot-arbol-completo, fig.height=6, fig.width=11}
+rpart.plot(arbol_full, type = 4, extra = 101,
+           main = "Árbol de regresión — todas las variables numéricas")
+```
+
+El salto más grande se da cuando pasamos del tamaño 1 al 3, pasamos de 1.0 a alrededor 0.5. Depués de ahí vamos teniendo mejoras a ritmos más pequeños. Esto quiere decir que con 3-4 niveles en el árbol probablemente logramos capturar o explicar en buenta parte el precio de una habitación. Sin embargo, al ver que los valores que están por debajo de la línea punteada son 8 y 12, esto puede sugerir que a estas profundidades podemos llegar a obtener un modelo que a pesar de ser complejo, pueda describir nuestra variable objetivo. Si se llegan a tomar, más adelante tendremos que tener cuidado con que no haya sobreajuste. 
+
+### **Predicción y métricas en prueba**
+
+```{r metricas-arbol-full}
+# probar árbol generado contra data de prueba.
+pred_arbol_full <- predict(arbol_full, newdata = test_num)
+
+rmse_af <- round(calc_rmse(test_num$price, pred_arbol_full), 2)
+mae_af  <- round(calc_mae(test_num$price, pred_arbol_full), 2)
+r2_af <- round(calc_r2(test_num$price, pred_arbol_full), 4)
+
+cat("RMSE:", rmse_af, "\n")
+cat("MAE: ", mae_af,  "\n")
+cat("R2:  ", r2_af,   "\n")
+```
+
+Esto representa una mejora sumamente enorme a lo que se obtuvo en el laboratorio 3, en ese entonces el R2 que se obtuvo estaba a penas en 0.0091 al pasarle la data de prueba. Este resultado en ese laboratorio no fue porque el modelo estuviera sobreajustado, porque incluso con data de entrenamiento los resultados eran bastante malos. En contraste, en este caso el R2 nos indica que nuestro modelo explica el 67.55% de los datos, que no es un punto ideal, puede que ajustando los niveles del árbol tengamos mejores resultados, pero sí ya es un punto favorable a comparación de lo que fue la regresión lineal. Esto puede deberse a que en la regresión lineal solo podemos explicar relaciones lineales, y probablemente nuestra variable objetivo a partir de nuestras variables "features" no tengan ese tipo de relación.
+
+
 ---
 
 ## **Actividades 4 y 5: Tuneo de Profundidad y Comparación con Regresión Lineal**
+
 
 ---
 
