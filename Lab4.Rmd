@@ -1,0 +1,104 @@
+---
+title: "Laboratorio 4 - Árboles de Decisión"
+author: "Bryan Martínez, Adriana Palacios, y Nery Molina"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+load("listings.RData")
+```
+
+## **Repositorio**
+
+https://github.com/Bamo0507/Laboratorio4_ArbolesDeDecision
+
+---
+
+## **Actividad 1: Preprocesamiento y División del Dataset**
+
+Se reutiliza exactamente el mismo preprocesamiento y partición del Laboratorio 3. Esto con el objetivo de poder comparar correctamente los resultados obtenidos al utilizar árboles de decisión contra el algoritmo de regresión lineal. La justificación de qué variables eliminar, selección de la semilla y manejo de NAs se ve evidenciado en el laboratorio pasado, para poder consultarlo a continuación se deja el link a ese repositorio: https://github.com/Bamo0507/Laboratorio3_Regresion
+
+```{r preprocesamiento}
+listings$price <- as.numeric(gsub("[$,]", "", listings$price))
+
+vars_eliminar <- c(
+  "id", "listing_url", "scrape_id", "picture_url",
+  "host_id", "host_url", "host_thumbnail_url", "host_picture_url",
+  "name", "description", "neighborhood_overview", "host_about",
+  "host_name", "host_location", "amenities", "host_verifications",
+  "source", "last_scraped", "calendar_last_scraped", "calendar_updated",
+  "host_since", "first_review", "last_review",
+  "bathrooms_text", "host_total_listings_count", "neighbourhood",
+  "minimum_nights_avg_ntm", "maximum_nights_avg_ntm",
+  "number_of_reviews_ltm", "number_of_reviews_l30d", "number_of_reviews_ly",
+  "calculated_host_listings_count_entire_homes",
+  "calculated_host_listings_count_private_rooms",
+  "calculated_host_listings_count_shared_rooms",
+  "estimated_revenue_l365d",
+  "host_has_profile_pic", "neighbourhood_group_cleansed"
+)
+
+listings_clean <- listings[, !(names(listings) %in% vars_eliminar)]
+```
+
+```{r division}
+listings_model <- listings_clean[!is.na(listings_clean$price), ]
+
+set.seed(42)
+# Division de datos, 70% para entrenamiento y 30% de testing
+trainIndex <- sample(seq_len(nrow(listings_model)), size = floor(0.7 * nrow(listings_model)))
+train <- listings_model[ trainIndex, ]
+test  <- listings_model[-trainIndex, ]
+
+cat("Total de filas en dataset:", nrow(listings_model), "\n")
+cat("Datos entrenamiento:", nrow(train), "\n")
+cat("Datos prueba:", nrow(test), "\n")
+```
+
+```{r datos-numericos}
+# Subset numérico — misma lógica que Lab 3 para comparabilidad
+train_num <- na.omit(train[, sapply(train, is.numeric)])
+test_num  <- test[, names(train_num)]
+test_num  <- na.omit(test_num)
+
+cat("Predictores numéricos disponibles:", ncol(train_num) - 1, "\n")
+cat("Filas en entrenamiento (numérico):", nrow(train_num), "\n")
+cat("Filas en prueba (numérico):", nrow(test_num), "\n")
+```
+
+```{r funciones-metricas, include=FALSE}
+calc_rmse <- function(obs, pred) sqrt(mean((obs - pred)^2, na.rm = TRUE))
+calc_mae  <- function(obs, pred) mean(abs(obs - pred), na.rm = TRUE)
+calc_r2   <- function(obs, pred) {
+  ss_res <- sum((obs - pred)^2, na.rm = TRUE)
+  ss_tot <- sum((obs - mean(obs, na.rm = TRUE))^2, na.rm = TRUE)
+  1 - ss_res / ss_tot
+}
+```
+
+---
+
+## **Actividades 2 y 3: Árbol de Regresión con Todas las Variables**
+
+---
+
+## **Actividades 4 y 5: Tuneo de Profundidad y Comparación con Regresión Lineal**
+
+---
+
+## **Actividad 6: Variable Respuesta Categórica**
+
+---
+
+## **Actividad 7: Árbol de Clasificación**
+
