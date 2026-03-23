@@ -216,8 +216,9 @@ Como era de esperarse por el análisis que se hizo anteriormente, en donde se di
 
 ## **Actividad 6: Variable Respuesta Categórica**
 
-# Como la distribución del precio está sesgada a la derecha y tiene valores extremos,
+Como la distribución del precio está sesgada a la derecha y tiene valores extremos, se utilizaron los percentiles 33 y 67 como límites para definir las tres categorías.
 
+```{r variable-categorica}
 q33 <- as.numeric(quantile(train_num$price, probs = 0.33, na.rm = TRUE))
 q67 <- as.numeric(quantile(train_num$price, probs = 0.67, na.rm = TRUE))
 
@@ -226,7 +227,7 @@ train_clf <- train_num %>%
     price_cat = cut(
       price,
       breaks = c(-Inf, q33, q67, Inf),
-      labels = c("Económica", "Intermedia", "Cara"),
+      labels = c("Economica", "Intermedia", "Cara"),
       right = TRUE,
       ordered_result = TRUE
     )
@@ -237,17 +238,17 @@ test_clf <- test_num %>%
     price_cat = cut(
       price,
       breaks = c(-Inf, q33, q67, Inf),
-      labels = c("Económica", "Intermedia", "Cara"),
+      labels = c("Economica", "Intermedia", "Cara"),
       right = TRUE,
       ordered_result = TRUE
     )
   )
 
-cat("Límite superior de Económica:", q33, "\n")
-cat("Límite superior de Intermedia:", q67, "\n")
+cat("Limite superior de Economica:", q33, "\n")
+cat("Limite superior de Intermedia:", q67, "\n")
 
 tabla_categorias <- tibble(
-  Categoria = c("Económica", "Intermedia", "Cara"),
+  Categoria = c("Economica", "Intermedia", "Cara"),
   Rango = c(
     paste0("[", min(train_clf$price, na.rm = TRUE), ", ", q33, "]"),
     paste0("(", q33, ", ", q67, "]"),
@@ -259,16 +260,19 @@ tabla_categorias <- tibble(
 
 knitr::kable(
   tabla_categorias,
-  caption = "Variable respuesta categórica creada a partir del precio por noche"
+  caption = "Variable respuesta categorica creada a partir del precio por noche"
 )
 ```
 
 La variable price presenta una distribución fuertemente sesgada a la derecha, con varios valores extremos altos. Por esa razón, no era conveniente dividir el precio en intervalos del mismo ancho, ya que eso habría dejado muy pocas observaciones en la categoría de propiedades más caras. En su lugar, se decidió construir la nueva variable respuesta usando los percentiles 33% y 67% del conjunto de entrenamiento. Con este criterio, las propiedades se clasifican en tres grupos: Económicas, Intermedias y Caras. La categoría Económica incluye las propiedades con precio menor o igual al percentil 33; la categoría Intermedia agrupa las que quedan entre el percentil 33 y el 67; y la categoría Cara contiene las que superan el percentil 67. Esta decisión tiene fundamento estadístico porque se apoya directamente en la distribución observada de los datos y además ayuda a que las tres clases queden relativamente balanceadas, lo cual favorece el entrenamiento del árbol de clasificación.
 
 ---
+
 ## **Actividad 7: Árbol de Clasificación**
 
-# Se elimina price como predictor porque la variable respuesta fue creada a partir de price.
+Se elimina `price` como predictor porque la variable respuesta fue creada a partir de él. Incluirlo permitiría al árbol predecir trivialmente sin aprender ningún patrón real.
+
+```{r arbol-clasificacion}
 train_tree_clf <- train_clf %>% select(-price)
 test_tree_clf  <- test_clf %>% select(-price)
 
@@ -276,20 +280,23 @@ set.seed(42)
 arbol_clasif <- rpart(
   price_cat ~ .,
   data = train_tree_clf,
-  method = "class",
-  control = rpart.control(maxdepth = 6, minsplit = 30, cp = 0.001)
+  method = "class"
 )
 
 printcp(arbol_clasif)
+```
 
+```{r plot-arbol-clasificacion, fig.height=7, fig.width=12}
 rpart.plot(
   arbol_clasif,
   type = 4,
   extra = 104,
   fallen.leaves = TRUE,
-  main = "Árbol de clasificación para rango de precio"
+  main = "Arbol de clasificacion para rango de precio"
 )
+```
 
+```{r importancia-clasificacion}
 importancia_clasif <- tibble(
   Variable = names(arbol_clasif$variable.importance),
   Importancia = as.numeric(arbol_clasif$variable.importance)
@@ -298,12 +305,36 @@ importancia_clasif <- tibble(
 
 knitr::kable(
   head(importancia_clasif, 10),
-  caption = "Variables más importantes en el árbol de clasificación"
+  caption = "Variables mas importantes en el arbol de clasificacion"
 )
 ```
-Para construir el árbol de clasificación se utilizó la nueva variable price_cat como respuesta y se excluyó la variable price del conjunto de predictores, ya que incluirla habría introducido fuga de información. El objetivo del modelo es aprender a clasificar una propiedad como Económica, Intermedia o Cara a partir del resto de variables numéricas disponibles.
 
-El árbol obtenido permite interpretar de forma clara cómo se separan las propiedades entre las tres categorías. Las divisiones superiores del árbol suelen concentrar la mayor capacidad explicativa, por lo que las variables que aparezcan en esos primeros nodos son las que más influyen en la clasificación. En este tipo de problema normalmente destacan variables relacionadas con el tamaño o capacidad del alojamiento y con la ubicación, lo cual tiene sentido, porque propiedades con más espacio, más capacidad y mejor localización tienden a pertenecer a categorías de precio más altas.
+```{r pred-clasificacion}
+pred_clasif <- predict(arbol_clasif, newdata = test_tree_clf, type = "class")
 
-Además, la representación gráfica del árbol facilita identificar reglas de decisión concretas. Por ejemplo, el modelo puede separar primero propiedades pequeñas de propiedades con mayor capacidad, y luego refinar la clasificación con variables adicionales. Esto hace que el árbol no solo sea útil para predecir, sino también para explicar qué características empujan a una vivienda hacia una categoría de precio específica.
+exactitud <- round(mean(as.character(pred_clasif) == as.character(test_tree_clf$price_cat), na.rm = TRUE) * 100, 2)
+cat("Exactitud en prueba:", exactitud, "%\n")
+
+tabla_conf <- table(Real = as.character(test_tree_clf$price_cat), Predicho = as.character(pred_clasif))
+knitr::kable(tabla_conf, caption = "Matriz de confusion - Arbol de clasificacion")
+```
+Para construir el árbol de clasificación se utilizó la nueva variable `price_cat` como respuesta y se excluyó `price` del conjunto de predictores, ya que incluirla habría introducido fuga de información directa.
+
+### Análisis del árbol
+
+El árbol utilizó únicamente tres variables en su construcción: `bathrooms`, `accommodates` y `longitude`. Aunque en la tabla de importancia aparecen `beds` y `bedrooms` como relevantes, el árbol no las necesitó como criterios de división porque `bathrooms` y `accommodates` ya capturaron suficientemente bien la separación entre clases.
+
+La primera división se realiza por `bathrooms < 1.8`. Esta es la variable con mayor poder discriminatorio: alojamientos con menos de 1.8 baños tienden a ser Económicos o Intermedios (60% de los datos, con 48% Económico y 15% Caro), mientras que los que tienen 1.8 baños o más son mayoritariamente Caros (40% de los datos, con 60% Caro y solo 10% Económico).
+
+Dentro de cada rama, `accommodates` refina la clasificación. En la rama de pocos baños, capacidad menor a 4 personas produce una hoja claramente Económica (65%). En la rama de muchos baños, capacidad mayor o igual a 4 produce la hoja más contundente del árbol: 63% Caro y solo 7% Económico, concentrando el 38% de todos los datos.
+
+`longitude` aparece únicamente en la zona más ambigua del árbol (pocos baños pero alta capacidad), funcionando como variable de ajuste fino para distinguir entre Económico e Intermedio en esa franja específica.
+
+### Análisis de la matriz de confusión
+
+El modelo alcanzó una exactitud global de **60.6%**. El rendimiento varía considerablemente entre clases:
+
+- **Económica** y **Cara** se clasifican bien, con un recall aproximado del 80% y 78% respectivamente. El árbol tiene reglas claras para los extremos: muchos baños y alta capacidad predicen Cara; pocos baños y baja capacidad predicen Económica.
+- **Intermedia** es la clase más difícil, con solo el **24.5% de recall** (1,561 correctos de 6,362 reales). La mayoría de casos Intermedios se confunden casi por igual entre Cara (2,386) y Económica (2,415). Esto tiene sentido: la clase media no tiene características propias bien definidas, sino que comparte atributos con ambos extremos dependiendo de la combinación de variables.
+
 ---
