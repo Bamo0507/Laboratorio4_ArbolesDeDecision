@@ -15,6 +15,8 @@ library(dplyr)
 library(ggplot2)
 library(rpart)
 library(rpart.plot)
+install.packages("randomForest") 
+library(randomForest)
 load("listings.RData")
 ```
 
@@ -338,3 +340,83 @@ El modelo alcanzó una exactitud global de **60.6%**. El rendimiento varía cons
 - **Intermedia** es la clase más difícil, con solo el **24.5% de recall** (1,561 correctos de 6,362 reales). La mayoría de casos Intermedios se confunden casi por igual entre Cara (2,386) y Económica (2,415). Esto tiene sentido: la clase media no tiene características propias bien definidas, sino que comparte atributos con ambos extremos dependiendo de la combinación de variables.
 
 ---
+
+## **Actividades 8 y 9: Eficiencia del Árbol de Clasificación y Matriz de Confusión**
+
+---
+
+## **Actividad 10: Validación Cruzada**
+
+---
+
+## **Actividad 11: Tuneo de Profundidad del Árbol de Clasificación**
+
+---
+
+## **Actividad 12: Random Forest**
+
+### Random Forest — Regresión
+
+```{r rf-regresion}
+set.seed(42)
+rf_reg <- randomForest(
+  price ~ .,
+  data    = train_num,
+  ntree   = 100,
+  importance = TRUE
+)
+
+pred_rf_reg <- predict(rf_reg, newdata = test_num)
+
+rmse_rf_reg <- round(calc_rmse(test_num$price, pred_rf_reg), 2)
+mae_rf_reg  <- round(calc_mae(test_num$price, pred_rf_reg), 2)
+r2_rf_reg   <- round(calc_r2(test_num$price, pred_rf_reg), 4)
+
+cat("RMSE:", rmse_rf_reg, "\n")
+cat("MAE: ", mae_rf_reg,  "\n")
+cat("R2:  ", r2_rf_reg,   "\n")
+```
+
+```{r rf-reg-importancia}
+importancia_rf_reg <- importance(rf_reg) %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("Variable") %>%
+  arrange(desc(`%IncMSE`))
+
+knitr::kable(
+  head(importancia_rf_reg, 10),
+  caption = "Variables mas importantes - Random Forest Regresion"
+)
+```
+
+### Random Forest — Clasificación
+
+```{r rf-clasificacion}
+set.seed(42)
+rf_clf <- randomForest(
+  price_cat ~ .,
+  data      = train_tree_clf,
+  ntree     = 100,
+  importance = TRUE
+)
+
+pred_rf_clf <- predict(rf_clf, newdata = test_tree_clf)
+
+exactitud_rf <- round(mean(as.character(pred_rf_clf) == as.character(test_tree_clf$price_cat), na.rm = TRUE) * 100, 2)
+cat("Exactitud en prueba:", exactitud_rf, "%\n")
+
+tabla_conf_rf <- table(Real = as.character(test_tree_clf$price_cat), Predicho = as.character(pred_rf_clf))
+knitr::kable(tabla_conf_rf, caption = "Matriz de confusion - Random Forest Clasificacion")
+```
+
+```{r rf-clf-importancia}
+importancia_rf_clf <- importance(rf_clf) %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("Variable") %>%
+  arrange(desc(MeanDecreaseGini))
+
+knitr::kable(
+  head(importancia_rf_clf, 10),
+  caption = "Variables mas importantes - Random Forest Clasificacion"
+)
+```
