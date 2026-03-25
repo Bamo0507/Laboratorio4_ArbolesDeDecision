@@ -1,0 +1,7 @@
+"0","rpart.plot("
+"0","  arbol_clasif,"
+"0","  type = 4,"
+"0","  extra = 104,"
+"0","  fallen.leaves = TRUE,"
+"0","  main = ""Arbol de clasificacion para rango de precio"""
+"0",")"

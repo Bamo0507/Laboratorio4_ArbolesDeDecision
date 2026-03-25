@@ -1,0 +1,2 @@
+"0","rpart.plot(arbol_full, type = 4, extra = 101,"
+"0","           main = ""Árbol de regresión — todas las variables numéricas"")"

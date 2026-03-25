@@ -1,0 +1,6 @@
+"0","importancia_rf_clf <- importance(rf_clf) %>%"
+"0","  as.data.frame() %>%"
+"0","  tibble::rownames_to_column(""Variable"") %>%"
+"0","  arrange(desc(MeanDecreaseGini))"
+"2","Error: object 'rf_clf' not found
+"

@@ -1,0 +1,7 @@
+"0","calc_rmse <- function(obs, pred) sqrt(mean((obs - pred)^2, na.rm = TRUE))"
+"0","calc_mae  <- function(obs, pred) mean(abs(obs - pred), na.rm = TRUE)"
+"0","calc_r2   <- function(obs, pred) {"
+"0","  ss_res <- sum((obs - pred)^2, na.rm = TRUE)"
+"0","  ss_tot <- sum((obs - mean(obs, na.rm = TRUE))^2, na.rm = TRUE)"
+"0","  1 - ss_res / ss_tot"
+"0","}"
