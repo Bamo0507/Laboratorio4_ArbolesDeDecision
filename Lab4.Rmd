@@ -342,7 +342,146 @@ El modelo alcanzó una exactitud global de **60.6%**. El rendimiento varía cons
 ---
 
 ## **Actividades 8 y 9: Eficiencia del Árbol de Clasificación y Matriz de Confusión**
+## **actividades 8 y 9: eficiencia del arbol de clasificacion y matriz de confusion**
 
+```{r metricas-arbol-clasificacion}
+# prediccion sobre el conjunto de prueba
+pred_clasif_test <- predict(arbol_clasif, newdata = test_tree_clf, type = "class")
+pred_clasif_test <- factor(pred_clasif_test, levels = levels(test_tree_clf$price_cat))
+
+# matriz de confusion
+matriz_confusion <- table(
+  real = test_tree_clf$price_cat,
+  predicho = pred_clasif_test
+)
+
+# metricas globales
+accuracy <- sum(diag(matriz_confusion)) / sum(matriz_confusion)
+error_rate <- 1 - accuracy
+
+# metricas por clase
+precision_clase <- ifelse(
+  colSums(matriz_confusion) == 0,
+  NA,
+  diag(matriz_confusion) / colSums(matriz_confusion)
+)
+
+recall_clase <- ifelse(
+  rowSums(matriz_confusion) == 0,
+  NA,
+  diag(matriz_confusion) / rowSums(matriz_confusion)
+)
+
+f1_clase <- ifelse(
+  (precision_clase + recall_clase) == 0,
+  NA,
+  2 * (precision_clase * recall_clase) / (precision_clase + recall_clase)
+)
+
+metricas_globales <- tibble(
+  metrica = c("accuracy", "error rate", "macro precision", "macro recall", "macro f1"),
+  valor = round(c(
+    accuracy,
+    error_rate,
+    mean(precision_clase, na.rm = TRUE),
+    mean(recall_clase, na.rm = TRUE),
+    mean(f1_clase, na.rm = TRUE)
+  ), 4)
+)
+
+metricas_por_clase <- tibble(
+  clase = rownames(matriz_confusion),
+  precision = round(precision_clase, 4),
+  recall = round(recall_clase, 4),
+  f1 = round(f1_clase, 4),
+  soporte = as.numeric(rowSums(matriz_confusion))
+)
+
+# matriz en porcentajes por fila
+matriz_pct <- round(prop.table(matriz_confusion, 1) * 100, 2)
+
+# efectividad por clase
+efectividad_clase <- tibble(
+  clase = rownames(matriz_confusion),
+  efectividad = round(100 * diag(matriz_confusion) / rowSums(matriz_confusion), 2)
+) %>%
+  arrange(desc(efectividad))
+
+# errores mas frecuentes
+errores_df <- as.data.frame(matriz_confusion) %>%
+  filter(real != predicho, freq > 0) %>%
+  arrange(desc(freq))
+
+# comparacion entre errores de categorias vecinas y extremas
+errores_pares <- tibble(
+  comparacion = c(
+    "economica <-> intermedia",
+    "intermedia <-> cara",
+    "economica <-> cara"
+  ),
+  total_errores = c(
+    matriz_confusion["Economica", "Intermedia"] + matriz_confusion["Intermedia", "Economica"],
+    matriz_confusion["Intermedia", "Cara"] + matriz_confusion["Cara", "Intermedia"],
+    matriz_confusion["Economica", "Cara"] + matriz_confusion["Cara", "Economica"]
+  )
+)
+
+# resumen automatico para el texto
+mejor_clase <- efectividad_clase$clase[1]
+peor_clase  <- efectividad_clase$clase[nrow(efectividad_clase)]
+
+error_mayor_real <- as.character(errores_df$real[1])
+error_mayor_pred <- as.character(errores_df$predicho[1])
+error_mayor_freq <- errores_df$freq[1]
+
+knitr::kable(
+  as.data.frame.matrix(matriz_confusion),
+  caption = "matriz de confusion del arbol de clasificacion"
+)
+
+knitr::kable(
+  metricas_globales,
+  caption = "metricas globales del arbol de clasificacion"
+)
+
+knitr::kable(
+  metricas_por_clase,
+  caption = "metricas por clase del arbol de clasificacion"
+)
+
+knitr::kable(
+  as.data.frame.matrix(matriz_pct),
+  caption = "matriz de confusion en porcentajes por clase real"
+)
+
+knitr::kable(
+  efectividad_clase,
+  caption = "efectividad del modelo por categoria"
+)
+
+knitr::kable(
+  errores_df,
+  caption = "errores de clasificacion ordenados de mayor a menor"
+)
+
+knitr::kable(
+  errores_pares,
+  caption = "errores agrupados por pares de categorias"
+)
+```
+actividad 8: metricas del arbol de clasificacion
+
+con el conjunto de prueba se evaluo la eficiencia del arbol de clasificacion mediante una matriz de confusion y distintas metricas de desempeno. la exactitud global obtenida fue de r round(accuracy * 100, 2)%, lo que significa que ese porcentaje de observaciones fue clasificado correctamente. ademas, el error rate fue de r round(error_rate * 100, 2)%, por lo que aun existe una proporcion importante de observaciones que el modelo no logra ubicar en su categoria correcta.
+
+para complementar esta evaluacion, tambien se calcularon metricas macro. la macro precision fue de r round(mean(precision_clase, na.rm = TRUE) * 100, 2)%, el macro recall fue de r round(mean(recall_clase, na.rm = TRUE) * 100, 2)% y el macro f1 fue de r round(mean(f1_clase, na.rm = TRUE) * 100, 2)%. estas medidas son importantes porque no solo muestran el rendimiento total del modelo, sino tambien que tan bien logra reconocer cada categoria de precio sin favorecer excesivamente a una sola clase.
+
+actividad 9: analisis de la eficiencia con matriz de confusion
+
+el analisis de la matriz de confusion permite identificar en que categorias el arbol clasifica mejor y en cuales presenta mas dificultad. la categoria con mayor efectividad fue r mejor_clase, con r round(max(efectividad_clase$efectividad), 2)% de observaciones correctamente clasificadas, mientras que la categoria con menor efectividad fue r peor_clase, con r round(min(efectividad_clase$efectividad), 2)%. esto indica que el modelo distingue mejor algunas clases que otras, especialmente cuando las observaciones tienen caracteristicas mas marcadas.
+
+el error mas frecuente fue clasificar r error_mayor_real como r error_mayor_pred, con r error_mayor_freq casos. este resultado sugiere que la mayor dificultad del arbol se concentra en categorias cercanas entre si, donde las propiedades comparten caracteristicas similares y por eso las fronteras entre clases no son tan claras. en cambio, cuando las categorias estan mas separadas, el modelo tiende a confundirse menos.
+
+desde el punto de vista practico, no todos los errores tienen la misma importancia. confundir una propiedad economica con una intermedia, o una intermedia con una cara, suele ser menos grave porque las categorias siguen siendo relativamente cercanas en el rango de precios. sin embargo, confundir una propiedad economica con una cara, o viceversa, representa un error mas severo, ya que implica ubicar una observacion en el extremo opuesto del rango. por eso, ademas de revisar la exactitud global, la matriz de confusion permite interpretar con mayor detalle la utilidad real del modelo.
 ---
 
 ## **Actividad 10: Validación Cruzada**
