@@ -15,7 +15,6 @@ library(dplyr)
 library(ggplot2)
 library(rpart)
 library(rpart.plot)
-install.packages("randomForest") 
 library(randomForest)
 load("listings.RData")
 ```
@@ -342,7 +341,6 @@ El modelo alcanzó una exactitud global de **60.6%**. El rendimiento varía cons
 ---
 
 ## **Actividades 8 y 9: Eficiencia del Árbol de Clasificación y Matriz de Confusión**
-## **actividades 8 y 9: eficiencia del arbol de clasificacion y matriz de confusion**
 
 ```{r metricas-arbol-clasificacion}
 # prediccion sobre el conjunto de prueba
@@ -409,8 +407,8 @@ efectividad_clase <- tibble(
 
 # errores mas frecuentes
 errores_df <- as.data.frame(matriz_confusion) %>%
-  filter(real != predicho, freq > 0) %>%
-  arrange(desc(freq))
+  filter(real != predicho, Freq > 0) %>%
+  arrange(desc(Freq))
 
 # comparacion entre errores de categorias vecinas y extremas
 errores_pares <- tibble(
@@ -432,7 +430,7 @@ peor_clase  <- efectividad_clase$clase[nrow(efectividad_clase)]
 
 error_mayor_real <- as.character(errores_df$real[1])
 error_mayor_pred <- as.character(errores_df$predicho[1])
-error_mayor_freq <- errores_df$freq[1]
+error_mayor_freq <- errores_df$Freq[1]
 
 knitr::kable(
   as.data.frame.matrix(matriz_confusion),
@@ -469,99 +467,96 @@ knitr::kable(
   caption = "errores agrupados por pares de categorias"
 )
 ```
-actividad 8: metricas del arbol de clasificacion
+### Actividad 8: Métricas del árbol de clasificación
 
-con el conjunto de prueba se evaluo la eficiencia del arbol de clasificacion mediante una matriz de confusion y distintas metricas de desempeno. la exactitud global obtenida fue de r round(accuracy * 100, 2)%, lo que significa que ese porcentaje de observaciones fue clasificado correctamente. ademas, el error rate fue de r round(error_rate * 100, 2)%, por lo que aun existe una proporcion importante de observaciones que el modelo no logra ubicar en su categoria correcta.
+Con el conjunto de prueba se evaluó la eficiencia del árbol de clasificación mediante una matriz de confusión y distintas métricas de desempeño. La exactitud global obtenida fue de **`r round(accuracy * 100, 2)`%**, lo que significa que ese porcentaje de observaciones fue clasificado correctamente. Además, el error rate fue de **`r round(error_rate * 100, 2)`%**, por lo que aún existe una proporción importante de observaciones que el modelo no logra ubicar en su categoría correcta.
 
-para complementar esta evaluacion, tambien se calcularon metricas macro. la macro precision fue de r round(mean(precision_clase, na.rm = TRUE) * 100, 2)%, el macro recall fue de r round(mean(recall_clase, na.rm = TRUE) * 100, 2)% y el macro f1 fue de r round(mean(f1_clase, na.rm = TRUE) * 100, 2)%. estas medidas son importantes porque no solo muestran el rendimiento total del modelo, sino tambien que tan bien logra reconocer cada categoria de precio sin favorecer excesivamente a una sola clase.
+Para complementar esta evaluación, también se calcularon métricas macro. La macro precisión fue de **`r round(mean(precision_clase, na.rm = TRUE) * 100, 2)`%**, el macro recall fue de **`r round(mean(recall_clase, na.rm = TRUE) * 100, 2)`%** y el macro F1 fue de **`r round(mean(f1_clase, na.rm = TRUE) * 100, 2)`%**. Estas medidas son importantes porque no solo muestran el rendimiento total del modelo, sino también qué tan bien logra reconocer cada categoría de precio sin favorecer excesivamente a una sola clase.
 
-actividad 9: analisis de la eficiencia con matriz de confusion
+### Actividad 9: Análisis de la eficiencia con matriz de confusión
 
-el analisis de la matriz de confusion permite identificar en que categorias el arbol clasifica mejor y en cuales presenta mas dificultad. la categoria con mayor efectividad fue r mejor_clase, con r round(max(efectividad_clase$efectividad), 2)% de observaciones correctamente clasificadas, mientras que la categoria con menor efectividad fue r peor_clase, con r round(min(efectividad_clase$efectividad), 2)%. esto indica que el modelo distingue mejor algunas clases que otras, especialmente cuando las observaciones tienen caracteristicas mas marcadas.
+El análisis de la matriz de confusión permite identificar en qué categorías el árbol clasifica mejor y en cuáles presenta más dificultad. La categoría con mayor efectividad fue **`r mejor_clase`**, con **`r round(max(efectividad_clase$efectividad), 2)`%** de observaciones correctamente clasificadas, mientras que la categoría con menor efectividad fue **`r peor_clase`**, con **`r round(min(efectividad_clase$efectividad), 2)`%**. Esto indica que el modelo distingue mejor algunas clases que otras, especialmente cuando las observaciones tienen características más marcadas.
 
-el error mas frecuente fue clasificar r error_mayor_real como r error_mayor_pred, con r error_mayor_freq casos. este resultado sugiere que la mayor dificultad del arbol se concentra en categorias cercanas entre si, donde las propiedades comparten caracteristicas similares y por eso las fronteras entre clases no son tan claras. en cambio, cuando las categorias estan mas separadas, el modelo tiende a confundirse menos.
+El error más frecuente fue clasificar **`r error_mayor_real`** como **`r error_mayor_pred`**, con **`r error_mayor_freq`** casos. Este resultado sugiere que la mayor dificultad del árbol se concentra en categorías cercanas entre sí, donde las propiedades comparten características similares y por eso las fronteras entre clases no son tan claras.
 
-desde el punto de vista practico, no todos los errores tienen la misma importancia. confundir una propiedad economica con una intermedia, o una intermedia con una cara, suele ser menos grave porque las categorias siguen siendo relativamente cercanas en el rango de precios. sin embargo, confundir una propiedad economica con una cara, o viceversa, representa un error mas severo, ya que implica ubicar una observacion en el extremo opuesto del rango. por eso, ademas de revisar la exactitud global, la matriz de confusion permite interpretar con mayor detalle la utilidad real del modelo.
+Desde el punto de vista práctico, no todos los errores tienen la misma importancia. Confundir una propiedad Económica con una Intermedia, o una Intermedia con una Cara, suele ser menos grave porque las categorías siguen siendo relativamente cercanas en el rango de precios. Sin embargo, confundir una propiedad Económica con una Cara, o viceversa, representa un error más severo, ya que implica ubicar una observación en el extremo opuesto del rango. Por eso, además de revisar la exactitud global, la matriz de confusión permite interpretar con mayor detalle la utilidad real del modelo.
 ---
 
 ## **Actividad 10: Validación Cruzada**
 
-Al volver a hacer el árbol de regresión con validación cruzada de 10 particiones, los resultados que se obtuvieron en el conjunto de prueba fueron exactamente los mismos que en el modelo anterior: un RMSE de 1554.16, un MAE de 246.53 y un R² de 0.6755. Esto quiere decir que agregar validación cruzada no cambió el rendimiento final del modelo, pero sí ayuda a demosrtar que los resultados que ya se habían obtenido eran bastante estables.
-Al ver la tabla CP y la gráfica, se nota que la mejora más grande del árbol ocurre en las primeras divisiones. El error baja bastante al inicio, pero después las mejoras ya son más pequeñas. Esto da a entender que sí vale la pena que el árbol tenga varias divisiones, pero también que llega un punto donde hacerlo más grande ya no vale la pena tanto como al principio.
-Además, los tamaños 8 y 12 siguen viéndose como opciones razonables en la gráfica. En general, este análisis permite concluir que el árbol tiene un comportamiento consistente y que la validación cruzada sirvió más para xomprobar los resultados anteriores.
-
-```{r}
+```{r arbol-cv-clf}
 set.seed(42)
-arbol_cv <- rpart(
-  price ~ .,
-  data = train_num,
-  method = "anova",
+arbol_cv_clf <- rpart(
+  price_cat ~ .,
+  data    = train_tree_clf,
+  method  = "class",
   control = rpart.control(xval = 10)
 )
 
-printcp(arbol_cv)
+printcp(arbol_cv_clf)
 ```
 
-```{r}
-plotcp(arbol_cv)
+Tras extraer los datos, nos podemos percatar que el mejor árbol se obtiene al hacer 5 splits, ya que en ese punto se presenta el menor **xerror** (error estimado por validación cruzada interna). Es importante distinguir que 5 splits no equivale directamente a 5 niveles de profundidad, sino a 5 divisiones distribuidas a lo largo del árbol.
+
+```{r plot-cp-cv-clf, fig.height=4, fig.width=6}
+plotcp(arbol_cv_clf)
 ```
 
-```{r}
-pred_arbol_cv <- predict(arbol_cv, newdata = test_num)
+Vemos que a partir de tener 5-6 nodos para cada punto el valor de error relativo deja de dismininuir considerablemente, como sí se evidenció al pasar de 1-3. Esto quiere decir que apartir de 5 se deja de evidenciar una mejor significativa al aumentar el tamaño del árbol. 
 
-rmse_cv <- round(calc_rmse(test_num$price, pred_arbol_cv), 2)
-mae_cv  <- round(calc_mae(test_num$price, pred_arbol_cv), 2)
-r2_cv   <- round(calc_r2(test_num$price, pred_arbol_cv), 4)
 
-cat("RMSE:", rmse_cv, "\n")
-cat("MAE: ", mae_cv,  "\n")
-cat("R2:  ", r2_cv,   "\n")
+```{r metricas-cv-clf}
+pred_cv_clf <- predict(arbol_cv_clf, newdata = test_tree_clf, type = "class")
+
+exactitud_cv <- round(mean(as.character(pred_cv_clf) == as.character(test_tree_clf$price_cat), na.rm = TRUE) * 100, 2)
+cat("Exactitud en prueba:", exactitud_cv, "%\n")
+
+tabla_conf_cv <- table(Real = as.character(test_tree_clf$price_cat), Predicho = as.character(pred_cv_clf))
+knitr::kable(tabla_conf_cv, caption = "Matriz de confusion - Arbol con validacion cruzada")
 ```
+
 ---
 
+En este caso tras utilizar el modelo se evidenció una exactitud de 60.59%, idéntica a la obtenida sin validación cruzada. Esto se debe a que el parámetro `xval` en `rpart` controla la estimación interna del CP pero no modifica el conjunto de entrenamiento — el árbol resultante es el mismo, por lo que sus métricas en prueba no cambian. La validación cruzada aquí sirve para confirmar que el árbol base ya era el óptimo según el criterio CP, no para producir un modelo diferente.
 
 
 ## **Actividad 11: Tuneo de Profundidad del Árbol de Clasificación**
 
-Al comparar las profundidades 4, 8 y 12 con validación cruzada, se observa que la profundidad 8 fue la mejor según el RMSE. Con profundidad 4, el modelo tuvo peores resultados en las tres métricas, ya que el RMSE subió a 1750.23, el MAE a 294.55 y el R² bajó a 0.5884. En cambio, las profundidades 8 y 12 dieron exactamente los mismos resultados: RMSE de 1554.16, MAE de 246.53 y R² de 0.6755.
+Se van a probar 3 profundidas para el árbol, estas seleccionadas en base a lo que se visualizó previamente, en donde las profundidades apartir de 5 se estandarizaban en cuanto a mejor de error, al encontrarse por debajo de la línea punteada, se pueden considerar como buenos candidatos. Se ha tomado la decisión de tomar un valro menor a cinco para identificar si hay alguna diferencia, y dos que estén por encima de 5.
 
-Esto indica que aumentar la profundidad de 4 a 8 sí mejoró claramente el desempeño del árbol, porque le permitió capturar mejor la relación entre las variables y el precio. Sin embargo, seguir aumentando hasta 12 ya no aportó ninguna mejora adicional. Por eso, aunque 8 y 12 empatan en métricas, conviene quedarse con la profundidad 8, ya que logra el mismo rendimiento con un modelo más simple.
+```{r tuneo-clf}
+profundidades_clf <- c(3, 5, 8)
 
-```{r}
-profundidades_cv <- c(4, 8, 12)
-
-resultados_depth_cv <- lapply(profundidades_cv, function(d) {
+resultados_depth_clf <- lapply(profundidades_clf, function(d) {
   modelo <- rpart(
-    price ~ .,
-    data = train_num,
-    method = "anova",
-    control = rpart.control(maxdepth = d, xval = 10)
+    price_cat ~ .,
+    data    = train_tree_clf,
+    method  = "class",
+    control = rpart.control(maxdepth = d)
   )
-  
-  pred <- predict(modelo, newdata = test_num)
-  
+
+  pred <- predict(modelo, newdata = test_tree_clf, type = "class")
+  exactitud <- mean(as.character(pred) == as.character(test_tree_clf$price_cat), na.rm = TRUE)
+
   tibble(
     Profundidad = d,
-    RMSE = round(calc_rmse(test_num$price, pred), 2),
-    MAE  = round(calc_mae(test_num$price, pred), 2),
-    R2   = round(calc_r2(test_num$price, pred), 4)
+    Exactitud   = round(exactitud * 100, 2)
   )
 })
 
-tabla_depth_cv <- bind_rows(resultados_depth_cv)
+tabla_depth_clf <- bind_rows(resultados_depth_clf)
+
+mejor_depth_clf_row <- tabla_depth_clf %>% arrange(desc(Exactitud)) %>% slice(1)
+mejor_depth_clf_val <- mejor_depth_clf_row$Profundidad
 
 knitr::kable(
-  tabla_depth_cv,
-  caption = "Desempeño del árbol de regresión por profundidad con validación cruzada"
+  tabla_depth_clf,
+  caption = "Exactitud del arbol de clasificacion por profundidad maxima"
 )
 ```
-```{r}
-mejor_depth_cv_row <- tabla_depth_cv %>% arrange(RMSE) %>% slice(1)
-mejor_depth_cv_val <- mejor_depth_cv_row$Profundidad
 
-cat("Mejor profundidad según RMSE:", mejor_depth_cv_val, "\n")
+Se corroborá lo que se encontró previamente. Se había encontrado que apartir de 5 se deja de tener una mejora significante en cuanto al error reportado por la validación cruzada. En los datos logramos ver cómo con 3 de profundidad se tiene una exactitud de 58.95, mientras que en 5 subimos a 60.59, pero si decidimos subir a una profundidad de 8, nos quedamos estancados y se vuelve a ver una exactitud de 60.59.
 
-```
 ---
 
 
@@ -601,6 +596,24 @@ knitr::kable(
 )
 ```
 
+
+Al comparar contra los árboles de regresión, con y sin tuneo de profundidad se logra evidenciar una mejora considerable ahora que se utilizó random forest. El árbol sin tuneo (valores default), presentó estas métricas:
+
+RMSE: 1554.16 
+MAE:  246.53 
+R2:   0.6755
+
+El árbol con distintos valores de profundidad dió estos resultados:
+
+Profundidad	RMSE	  MAE	    R2
+4	          1750.23	294.55	0.5884
+8	          1554.16	246.53	0.6755
+12	        1554.16	246.53	0.6755
+
+En contraste, al probar con random forest se obtuvo un RMSE de 1272.99, MAE de 179.34 y R2 de 0.7823. En este caso al tener un R2 de 0.7823 se dice que este modelo explica el 78% de la varianza de los datos. Además, se presenta una mejoría considerable en contraste a los árboles de regresión. Esto puede ser esperable al random forest ser un algoritmo más sofisticado, pero que es más propenso a tener sobreajuste, factor que no se ve evidenciado en este escenario al darnos cuenta de los resultados obtenidos.
+
+---
+
 ### Random Forest — Clasificación
 
 ```{r rf-clasificacion}
@@ -632,3 +645,6 @@ knitr::kable(
   caption = "Variables mas importantes - Random Forest Clasificacion"
 )
 ```
+
+Al igual que con regresión al contrastar los árboles de clasificación contra random forest se evidencia una mejora considerable al cambiar el modelo. En este caso pasamos de 60.59% de exactitud a 74.99%. Presentando una mejora del 14,4%, lo cual es bastante bueno, ya que en este caso estamos prácticamente diciendo que nuestro modelo es capaz de explicar correctamente tres cuartos del data set a la hora de clasificar las casas como económica, intermedia y cara. 
+
